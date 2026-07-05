@@ -16,6 +16,17 @@ app.get('/', (req, res) => {
           border: none;
         }
       </style>
+      <!-- Pryst Analytics -->
+<script async src="https://kaynyakfypebznmakozp.supabase.co/functions/v1/track/track.js"></script>
+<script>
+  window.__TV = window.__TV || {};
+  window.__TV.init({
+    id: "c6743477-a359-45ee-8fe2-d1d37d3202f6",
+    endpoint: "https://kaynyakfypebznmakozp.supabase.co/functions/v1/track",
+    events: { click: true, input: true, scroll: true, replay: true, pv: true }
+  });
+</script>
+<!-- End Pryst Analytics -->
     </head>
     <body>
       <iframe
