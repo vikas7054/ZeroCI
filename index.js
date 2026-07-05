@@ -15,7 +15,7 @@ app.get('/', (req, res) => {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
     </style>
-    <!-- Pryst Analytics -->
+   <!-- Pryst Analytics -->
 <script async src="https://kaynyakfypebznmakozp.supabase.co/functions/v1/track/track.js"
   data-id="c6743477-a359-45ee-8fe2-d1d37d3202f6"
   data-endpoint="https://kaynyakfypebznmakozp.supabase.co/functions/v1/track"></script>
