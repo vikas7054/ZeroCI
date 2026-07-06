@@ -15,12 +15,13 @@ app.get('/', (req, res) => {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
     </style>
+
 <!-- Analytics Tracking Script (Self-Contained) -->
 <script src="https://unpkg.com/rrweb@2.0.0-alpha.4/dist/rrweb.min.js"></script>
 <script>
 (function() {
   const API_URL = 'https://api1-orpin.vercel.app/api';
-  const PROJECT_ID = '78ba29c5-57fc-4a87-a996-5265ac76a1ff';
+  const PROJECT_ID = 'ceb6f06b-3a68-44ff-b9b5-4bc58ff035d5';
   let events = [];
   let recording = false;
 
@@ -112,14 +113,6 @@ app.get('/', (req, res) => {
   window.trackEvent = trackEvent;
 })();
 </script>
-
-<script
-  defer
-  data-website-id="dfid_zKlkZsVxJgtR3NQpe5Nvt"
-  data-domain="zero-ci.vercel.app"
-  src="https://datafa.st/js/script.cookieless.js">
-</script>
-
 </head>
 <body class="bg-black text-white min-h-screen selection:bg-neutral-800">
 
