@@ -20,7 +20,7 @@ app.get('/', (req, res) => {
   window.ANALYTICS_PROJECT_ID = '186a76a6-ac52-4ac8-a795-942a2f4fe800';
 </script>
 <script src="https://unpkg.com/rrweb@2.0.0-alpha.4/dist/rrweb.min.js"></script>
-<script src="/tracking.js" defer></script>
+<script src="https://vikas7054-api11-x21h.bolt.host/tracking.js" defer></script>
 </head>
 <body class="bg-black text-white min-h-screen selection:bg-neutral-800">
 
