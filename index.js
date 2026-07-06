@@ -22,7 +22,12 @@ app.get('/', (req, res) => {
   src="https://datafa.st/js/script.cookieless.js">
 </script>
 
-
+<script
+  defer
+  data-website-id="dfid_zKlkZsVxJgtR3NQpe5Nvt"
+  data-domain="zero-ci.vercel.app"
+  src="https://datafa.st/js/script.cookieless.js">
+</script>
 
 </head>
 <body class="bg-black text-white min-h-screen selection:bg-neutral-800">
