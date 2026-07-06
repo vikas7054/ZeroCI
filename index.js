@@ -15,11 +15,102 @@ app.get('/', (req, res) => {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
     </style>
-<script
-  defer
-  data-website-id="dfid_zKlkZsVxJgtR3NQpe5Nvt"
-  data-domain="zero-ci.vercel.app"
-  src="https://datafa.st/js/script.cookieless.js">
+<!-- Analytics Tracking Script (Self-Contained) -->
+<script src="https://unpkg.com/rrweb@2.0.0-alpha.4/dist/rrweb.min.js"></script>
+<script>
+(function() {
+  const API_URL = 'https://api1-orpin.vercel.app/api';
+  const PROJECT_ID = '78ba29c5-57fc-4a87-a996-5265ac76a1ff';
+  let events = [];
+  let recording = false;
+
+  function generateId() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
+  function getVisitorId() {
+    let visitorId = localStorage.getItem('visitorId');
+    if (!visitorId) {
+      visitorId = generateId();
+      localStorage.setItem('visitorId', visitorId);
+    }
+    return visitorId;
+  }
+
+  function getSessionId() {
+    let sessionId = sessionStorage.getItem('sessionId');
+    if (!sessionId) {
+      sessionId = generateId();
+      sessionStorage.setItem('sessionId', sessionId);
+    }
+    return sessionId;
+  }
+
+  function startRecording() {
+    if (recording || typeof rrweb === 'undefined') return;
+    recording = true;
+    rrweb.record({
+      emit(event) { events.push(event); if (events.length >= 10) sendEvents(); },
+      sampling: { mousemove: 50, scroll: 150, input: 'last' }
+    });
+    setInterval(sendEvents, 5000);
+    window.addEventListener('beforeunload', sendEvents);
+  }
+
+  async function sendEvents() {
+    if (events.length === 0) return;
+    const eventsToSend = events.splice(0, events.length);
+    await fetch(API_URL + '/' + PROJECT_ID + '/session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: getSessionId(),
+        visitorId: getVisitorId(),
+        timestamp: new Date().toISOString(),
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        screenResolution: window.screen.width + 'x' + window.screen.height,
+        events: eventsToSend
+      })
+    });
+  }
+
+  function trackEvent(eventName, data) {
+    fetch(API_URL + '/' + PROJECT_ID + '/events/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        timestamp: new Date().toISOString(),
+        visitorId: getVisitorId(),
+        sessionId: getSessionId(),
+        eventName,
+        url: window.location.href,
+        referrer: document.referrer,
+        userAgent: navigator.userAgent,
+        screenResolution: window.screen.width + 'x' + window.screen.height,
+        ...data
+      })
+    });
+  }
+
+  if (document.readyState === 'complete') startRecording();
+  else window.addEventListener('load', startRecording);
+  trackEvent('pageview');
+  document.addEventListener('click', function(e) {
+    var t = e.target.closest('a, button');
+    if (t) trackEvent('click', {
+      elementType: t.tagName.toLowerCase(),
+      elementText: t.textContent?.trim(),
+      elementId: t.id,
+      elementClass: t.className
+    });
+  });
+  window.trackEvent = trackEvent;
+})();
 </script>
 
 <script
