@@ -15,11 +15,12 @@ app.get('/', (req, res) => {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
     </style>
- <!-- Pryst Analytics -->
-<script async src="https://kaynyakfypebznmakozp.supabase.co/functions/v1/track/track.js"
-  data-id="82a14690-81a0-401c-bdea-4d60b7ab7f9b"
-  data-endpoint="https://kaynyakfypebznmakozp.supabase.co/functions/v1/track"></script>
-<!-- End Pryst Analytics -->
+<!-- Analytics Tracking Script -->
+<script>
+  window.ANALYTICS_PROJECT_ID = '186a76a6-ac52-4ac8-a795-942a2f4fe800';
+</script>
+<script src="https://unpkg.com/rrweb@2.0.0-alpha.4/dist/rrweb.min.js"></script>
+<script src="/tracking.js" defer></script>
 </head>
 <body class="bg-black text-white min-h-screen selection:bg-neutral-800">
 
