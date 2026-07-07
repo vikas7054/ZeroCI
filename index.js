@@ -16,15 +16,23 @@ app.get('/', (req, res) => {
         body { font-family: 'Inter', sans-serif; }
     </style>
 
-<!-- Analytics Tracking Script (Self-Contained) -->
+<!-- Custom Analytics Tracking Script -->
 <script src="https://unpkg.com/rrweb@2.0.0-alpha.4/dist/rrweb.min.js"></script>
 <script>
 (function() {
   const API_URL = 'https://api1-orpin.vercel.app/api';
-  const PROJECT_ID = 'ceb6f06b-3a68-44ff-b9b5-4bc58ff035d5';
-  let events = [];
-  let recording = false;
+  const PROJECT_ID = '5d6a6287-8517-4838-bd68-67f5c8cab180';
+  const CONFIG = {
+    mode: 'both',
+    eventBatchSize: 10,
+    sessionBatchSize: 50,
+    pushInterval: 10000,
+    pushStrategy: 'batch',
+    trackClicks: true,
+    trackPageviews: true
+  };
 
+  // --- Helpers ---
   function generateId() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
       const r = Math.random() * 16 | 0;
@@ -51,66 +59,154 @@ app.get('/', (req, res) => {
     return sessionId;
   }
 
+  function getPageInfo() {
+    return {
+      url: window.location.href,
+      referrer: document.referrer,
+      userAgent: navigator.userAgent,
+      screenResolution: window.screen.width + 'x' + window.screen.height,
+      viewportWidth: window.innerWidth,
+      viewportHeight: window.innerHeight,
+      language: navigator.language
+    };
+  }
+
+  // --- Events Tracking ---
+  let eventsBuffer = [];
+  let eventsSendTimeout = null;
+
+  function flushEventsBuffer() {
+    if (eventsBuffer.length === 0) return;
+    const batch = eventsBuffer.splice(0, eventsBuffer.length);
+    const payload = {
+      type: 'events_batch',
+      visitorId: getVisitorId(),
+      sessionId: getSessionId(),
+      timestamp: new Date().toISOString(),
+      ...getPageInfo(),
+      events: batch
+    };
+    sendToAPI('/events/batch', payload);
+  }
+
+  function scheduleEventsFlush() {
+    if (CONFIG.pushStrategy === 'immediate') {
+      flushEventsBuffer();
+    } else {
+      if (eventsSendTimeout) clearTimeout(eventsSendTimeout);
+      if (eventsBuffer.length >= CONFIG.eventBatchSize) {
+        flushEventsBuffer();
+      } else {
+        eventsSendTimeout = setTimeout(flushEventsBuffer, CONFIG.pushInterval);
+      }
+    }
+  }
+
+  function trackEvent(eventName, data) {
+    const event = {
+      timestamp: new Date().toISOString(),
+      eventName,
+      ...data
+    };
+    eventsBuffer.push(event);
+    if (CONFIG.pushStrategy === 'immediate' || eventsBuffer.length >= CONFIG.eventBatchSize) {
+      scheduleEventsFlush();
+    } else {
+      scheduleEventsFlush();
+    }
+  }
+
+  window.trackEvent = trackEvent;
+
+  // --- Session Recording ---
+  let sessionEvents = [];
+  let recording = false;
+  let sessionSendTimeout = null;
+
   function startRecording() {
     if (recording || typeof rrweb === 'undefined') return;
     recording = true;
     rrweb.record({
-      emit(event) { events.push(event); if (events.length >= 10) sendEvents(); },
-      sampling: { mousemove: 50, scroll: 150, input: 'last' }
+      emit(event) {
+        sessionEvents.push(event);
+        if (CONFIG.pushStrategy === 'immediate' || sessionEvents.length >= CONFIG.sessionBatchSize) {
+          scheduleSessionFlush();
+        } else {
+          scheduleSessionFlush();
+        }
+      },
+      recordCanvas: true,
+      sampling: { mousemove: 50, scroll: 150, input: 'last', canvas: 10, media: 500 }
     });
-    setInterval(sendEvents, 5000);
-    window.addEventListener('beforeunload', sendEvents);
   }
 
-  async function sendEvents() {
-    if (events.length === 0) return;
-    const eventsToSend = events.splice(0, events.length);
-    await fetch(API_URL + '/' + PROJECT_ID + '/session', {
+  function flushSessionBuffer() {
+    if (sessionEvents.length === 0) return;
+    const batch = sessionEvents.splice(0, sessionEvents.length);
+    const payload = {
+      type: 'session_batch',
+      sessionId: getSessionId(),
+      visitorId: getVisitorId(),
+      timestamp: new Date().toISOString(),
+      ...getPageInfo(),
+      events: batch
+    };
+    sendToAPI('/session', payload);
+  }
+
+  function scheduleSessionFlush() {
+    if (CONFIG.pushStrategy === 'immediate') {
+      flushSessionBuffer();
+    } else {
+      if (sessionSendTimeout) clearTimeout(sessionSendTimeout);
+      if (sessionEvents.length >= CONFIG.sessionBatchSize) {
+        flushSessionBuffer();
+      } else {
+        sessionSendTimeout = setTimeout(flushSessionBuffer, CONFIG.pushInterval);
+      }
+    }
+  }
+
+  // --- API Sender ---
+  function sendToAPI(endpoint, data) {
+    fetch(API_URL + '/' + PROJECT_ID + endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        sessionId: getSessionId(),
-        visitorId: getVisitorId(),
-        timestamp: new Date().toISOString(),
-        url: window.location.href,
-        userAgent: navigator.userAgent,
-        screenResolution: window.screen.width + 'x' + window.screen.height,
-        events: eventsToSend
-      })
+      body: JSON.stringify(data)
+    }).catch(function(err) {
+      console.warn('Analytics send failed:', err);
     });
   }
 
-  function trackEvent(eventName, data) {
-    fetch(API_URL + '/' + PROJECT_ID + '/events/track', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        timestamp: new Date().toISOString(),
-        visitorId: getVisitorId(),
-        sessionId: getSessionId(),
-        eventName,
-        url: window.location.href,
-        referrer: document.referrer,
-        userAgent: navigator.userAgent,
-        screenResolution: window.screen.width + 'x' + window.screen.height,
-        ...data
-      })
+  // --- Initialization ---
+  function init() {
+    if (document.readyState === "complete") startRecording(); else window.addEventListener("load", startRecording);
+    trackEvent("pageview");
+    
+    document.addEventListener('click', function(e) {
+      var target = e.target.closest('a, button');
+      if (target) trackEvent('click', {
+        elementType: target.tagName.toLowerCase(),
+        elementText: target.textContent ? target.textContent.trim() : '',
+        elementId: target.id,
+        elementClass: target.className
+      });
+    });
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+      flushEventsBuffer();
+      flushSessionBuffer();
     });
   }
 
-  if (document.readyState === 'complete') startRecording();
-  else window.addEventListener('load', startRecording);
-  trackEvent('pageview');
-  document.addEventListener('click', function(e) {
-    var t = e.target.closest('a, button');
-    if (t) trackEvent('click', {
-      elementType: t.tagName.toLowerCase(),
-      elementText: t.textContent?.trim(),
-      elementId: t.id,
-      elementClass: t.className
-    });
-  });
-  window.trackEvent = trackEvent;
+  
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
 })();
 </script>
 </head>
