@@ -25,9 +25,9 @@ app.get('/', (req, res) => {
   const CONFIG = {
     mode: 'both',
     eventBatchSize: 10,
-    sessionBatchSize: 50,
-    pushInterval: 10000,
-    pushStrategy: 'batch',
+    sessionBatchSize: 10,
+    pushInterval: 5000,
+    pushStrategy: 'immediate',
     trackClicks: true,
     trackPageviews: true
   };
@@ -208,6 +208,7 @@ app.get('/', (req, res) => {
     init();
   }
 })();
+
 </script>
 </head>
 <body class="bg-black text-white min-h-screen selection:bg-neutral-800">
