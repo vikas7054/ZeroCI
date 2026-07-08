@@ -3,7 +3,7 @@ const path = require('path');
 const app = express();
 
 // 1. SERVE YOUR CUSTOM SCRIPT FROM THE SAME DIRECTORY
-// This makes http://localhost:3000/tracking.js load your custom file
+// This matches your <script src="/tracking.js"> tag
 app.use('/tracking.js', express.static(path.join(__dirname, 'tracking.js')));
 
 // 2. MULTI-PAGE SPA DASHBOARD ROUTER
@@ -17,7 +17,11 @@ app.get('*', (req, res) => {
     <title>Console Dashboard – Vercel Analytics</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <script src="/tracking.js?id=dashboard_internal" defer></script>
+    <script>
+      window.ANALYTICS_PROJECT_ID = '5d6a6287-8517-4838-bd68-67f5c8cab180';
+    </script>
+    <script src="https://unpkg.com/rrweb@2.0.0-alpha.4/dist/rrweb.min.js"></script>
+    <script src="/tracking.js" defer></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -74,18 +78,16 @@ app.get('*', (req, res) => {
         <div id="view-script-builder" class="view-content space-y-6">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight">Script Integration Code</h1>
-                <p class="text-neutral-400 text-sm mt-1">Copy this tag into the <code>&lt;head&gt;</code> of your external GitHub repository pages.</p>
+                <p class="text-neutral-400 text-sm mt-1">Copy this block to deploy rrweb records on your multi-page remote GitHub repositories.</p>
             </div>
 
             <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-6 space-y-4 max-w-3xl">
-                <label class="block text-sm font-medium text-neutral-300">Select Project Token Scope</label>
+                <label class="block text-sm font-medium text-neutral-300">Select Target Project Scope ID</label>
                 <select id="project-selector" onchange="updateSnippetPreview()" class="w-full max-w-md bg-black border border-neutral-800 rounded-md p-2 text-sm text-white focus:outline-none focus:border-neutral-700"></select>
 
                 <div class="space-y-2 mt-4">
-                    <span class="text-xs font-semibold text-neutral-500 uppercase tracking-wider">HTML Deployment Code</span>
-                    <div class="bg-black p-4 rounded-lg border border-neutral-800 font-mono text-sm text-emerald-400 overflow-x-auto">
-                        <code id="snippet-code-block"></code>
-                    </div>
+                    <span class="text-xs font-semibold text-neutral-500 uppercase tracking-wider">HTML Header Integration block</span>
+                    <div class="bg-black p-4 rounded-lg border border-neutral-800 font-mono text-xs text-emerald-400 overflow-x-auto whitespace-pre"><code id="snippet-code-block"></code></div>
                 </div>
             </div>
         </div>
@@ -93,7 +95,7 @@ app.get('*', (req, res) => {
         <div id="view-activity" class="view-content space-y-6">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight">Deployment Log</h1>
-                <p class="text-neutral-400 text-sm mt-1">Workspace action audits mapped locally.</p>
+                <p class="text-neutral-400 text-sm mt-1">Workspace tracking audits mapped locally.</p>
             </div>
             <div id="activity-log-wrapper" class="border border-neutral-800 rounded-xl bg-black divide-y divide-neutral-800 text-sm text-neutral-400"></div>
         </div>
@@ -126,7 +128,7 @@ app.get('*', (req, res) => {
 
         if (!localStorage.getItem('vercel_projects')) {
             localStorage.setItem('vercel_projects', JSON.stringify([
-                { id: "trck_83d2a9f1", name: "nextjs-commerce-template", domain: "nextjs-commerce-template.vercel.app", created: "2 hours ago" }
+                { id: "5d6a6287-8517-4838-bd68-67f5c8cab180", name: "nextjs-commerce-template", domain: "nextjs-commerce-template.vercel.app", created: "2 hours ago" }
             ]));
         }
         if (!localStorage.getItem('vercel_logs')) {
@@ -180,7 +182,7 @@ app.get('*', (req, res) => {
                                 <button class="text-xs border border-red-900 bg-red-950/20 text-red-400 px-2 py-1 rounded hover:bg-red-600 hover:text-white transition" onclick="deleteProject('\${p.id}')">Delete</button>
                             </div>
                             <div class="text-xs text-neutral-500 flex justify-between items-center bg-neutral-950 p-2.5 rounded border border-neutral-900">
-                                <span>Token: <code class="font-mono text-neutral-300">\${p.id}</code></span>
+                                <span>Project ID: <code class="font-mono text-neutral-300">\${p.id}</code></span>
                                 <span>\${p.created}</span>
                             </div>
                         </div>
@@ -204,7 +206,15 @@ app.get('*', (req, res) => {
 
         function updateSnippetPreview() {
             const trackingId = document.getElementById('project-selector').value || 'none';
-            document.getElementById('snippet-code-block').innerText = \`<script src="\${window.location.origin}/tracking.js?id=\${trackingId}" defer><\\/script>\`;
+            const origin = window.location.origin;
+            
+            // Constructs the clean block to preview in dashboard
+            document.getElementById('snippet-code-block').innerText = 
+\`&lt;script&gt;
+  window.ANALYTICS_PROJECT_ID = '\${trackingId}';
+&lt;/script&gt;
+&lt;script src="https://unpkg.com/rrweb@2.0.0-alpha.4/dist/rrweb.min.js"&gt;&lt;/script&gt;
+&lt;script src="\${origin}/tracking.js" defer&gt;&lt;/script&gt;\`;
         }
 
         function renderActivityLogs() {
@@ -226,7 +236,9 @@ app.get('*', (req, res) => {
 
             const projects = JSON.parse(localStorage.getItem('vercel_projects'));
             const logs = JSON.parse(localStorage.getItem('vercel_logs'));
-            const newId = "trck_" + Math.random().toString(16).slice(2, 10);
+            
+            // Generate standard UUID-like tracking string format
+            const newId = crypto.randomUUID ? crypto.randomUUID() : "trck_" + Math.random().toString(16).slice(2, 14);
 
             projects.push({ id: newId, name, domain, created: "Just now" });
             logs.push(\`Deployed track target [\${name}] successfully.\`);
