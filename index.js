@@ -1,6 +1,12 @@
 const express = require('express');
+const path = require('path');
 const app = express();
 
+// 1. SERVE YOUR CUSTOM SCRIPT FROM THE SAME DIRECTORY
+// This makes http://localhost:3000/tracking.js load your custom file
+app.use('/tracking.js', express.static(path.join(__dirname, 'tracking.js')));
+
+// 2. MULTI-PAGE SPA DASHBOARD ROUTER
 app.get('*', (req, res) => {
   res.send(`
 <!DOCTYPE html>
@@ -8,8 +14,11 @@ app.get('*', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard – Vercel Clone</title>
+    <title>Console Dashboard – Vercel Analytics</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="/tracking.js?id=dashboard_internal" defer></script>
+
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
@@ -28,238 +37,116 @@ app.get('*', (req, res) => {
                     </svg>
                     <span class="text-neutral-600">/</span>
                     <div class="flex items-center space-x-2">
-                        <div class="h-5 w-5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-[10px] font-bold">P</div>
-                        <span class="text-sm font-medium hover:text-neutral-300 cursor-pointer" onclick="navigateTo('/')">personal-projects</span>
+                        <div class="h-5 w-5 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-[10px] font-bold">A</div>
+                        <span class="text-sm font-medium hover:text-neutral-300 cursor-pointer" onclick="navigateTo('/')">analytics-workspace</span>
                         <span class="bg-neutral-800 text-neutral-400 text-[10px] font-medium px-2 py-0.5 rounded-full">Hobby</span>
                     </div>
                 </div>
 
                 <div class="flex items-center space-x-4">
-                    <button class="text-sm text-neutral-400 hover:text-white transition hidden sm:inline-block">Feedback</button>
-                    <button class="text-sm text-neutral-400 hover:text-white transition hidden sm:inline-block">Docs</button>
-                    <button class="bg-white text-black text-sm font-medium px-3 py-1.5 rounded-md hover:bg-neutral-200 transition">Create New...</button>
+                    <button class="bg-white text-black text-sm font-medium px-3 py-1.5 rounded-md hover:bg-neutral-200 transition" onclick="openNewProjectModal()">
+                        Deploy Project...
+                    </button>
                     <div class="h-8 w-8 rounded-full border border-neutral-700 bg-neutral-800 cursor-pointer"></div>
                 </div>
             </div>
         </div>
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div id="nav-tabs" class="flex space-x-6 text-sm overflow-x-auto whitespace-nowrap scrollbar-none">
-                <button data-path="/" onclick="navigateTo('/')" class="nav-tab border-b-2 border-white py-3 text-white font-medium transition focus:outline-none">Overview</button>
-                <button data-path="/integrations" onclick="navigateTo('/integrations')" class="nav-tab border-b-2 border-transparent py-3 text-neutral-400 hover:text-neutral-200 transition focus:outline-none">Integrations</button>
-                <button data-path="/activity" onclick="navigateTo('/activity')" class="nav-tab border-b-2 border-transparent py-3 text-neutral-400 hover:text-neutral-200 transition focus:outline-none">Activity</button>
-                <button data-path="/settings" onclick="navigateTo('/settings')" class="nav-tab border-b-2 border-transparent py-3 text-neutral-400 hover:text-neutral-200 transition focus:outline-none">Settings</button>
+            <div id="nav-tabs" class="flex space-x-6 text-sm overflow-x-auto whitespace-nowrap">
+                <button data-path="/" onclick="navigateTo('/')" class="nav-tab border-b-2 border-white py-3 text-white font-medium focus:outline-none">Overview</button>
+                <button data-path="/script-builder" onclick="navigateTo('/script-builder')" class="nav-tab border-b-2 border-transparent py-3 text-neutral-400 hover:text-neutral-200 focus:outline-none">Script Snippet</button>
+                <button data-path="/activity" onclick="navigateTo('/activity')" class="nav-tab border-b-2 border-transparent py-3 text-neutral-400 hover:text-neutral-200 focus:outline-none">Deployment Log</button>
             </div>
         </div>
     </nav>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        <div id="view-overview" class="view-content active space-y-10">
-            <div class="flex flex-col sm:flex-row gap-4 items-center justify-between">
-                <div class="relative w-full sm:w-96">
-                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <svg class="h-4 w-4 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                    </span>
-                    <input type="text" placeholder="Search repositories and projects..." class="w-full pl-10 pr-4 py-2 bg-neutral-900 border border-neutral-800 rounded-md text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-700 focus:ring-1 focus:ring-neutral-700 transition">
-                </div>
-                <div class="flex items-center space-x-3 w-full sm:w-auto justify-end">
-                    <select class="bg-neutral-900 border border-neutral-800 rounded-md text-sm px-3 py-2 text-neutral-400 focus:outline-none focus:border-neutral-700">
-                        <option>Sort by Activity</option>
-                        <option>Sort by Name</option>
-                    </select>
-                </div>
+        <div id="view-overview" class="view-content active space-y-8">
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">Active Projects</h1>
+                <p class="text-xs text-neutral-500 mt-0.5">Stored dynamically inside your browser's LocalStorage engine.</p>
             </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 space-y-6">
-                    <div class="bg-black border border-neutral-800 rounded-xl overflow-hidden hover:border-neutral-700 transition group">
-                        <div class="p-6 space-y-4">
-                            <div class="flex items-start justify-between">
-                                <div>
-                                    <h2 class="text-xl font-semibold tracking-tight group-hover:underline cursor-pointer flex items-center gap-2">
-                                        nextjs-commerce-template
-                                        <span class="h-2 w-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-                                    </h2>
-                                    <a href="#" class="text-sm text-neutral-400 hover:text-neutral-300 flex items-center gap-1 mt-1">
-                                        nextjs-commerce-template.vercel.app
-                                    </a>
-                                </div>
-                                <span class="bg-neutral-900 border border-neutral-800 text-neutral-400 text-xs font-medium px-2.5 py-1 rounded-md">Production</span>
-                            </div>
-                            <div class="flex items-center space-x-2 text-sm text-neutral-400 bg-neutral-950 p-3 rounded-md border border-neutral-900">
-                                <span class="font-mono text-white text-xs">main</span>
-                                <span>•</span>
-                                <span class="truncate">feat: optimize image loading and add custom layout sizing</span>
-                                <span class="text-xs text-neutral-500 whitespace-nowrap">2h ago</span>
-                            </div>
-                        </div>
-                        <div class="bg-neutral-950 border-t border-neutral-800 px-6 py-3 flex items-center justify-between text-xs text-neutral-400">
-                            <div class="flex items-center space-x-4">
-                                <span>Framework: <strong class="text-white font-medium">Next.js</strong></span>
-                            </div>
-                            <span>Deployed by GitHub</span>
-                        </div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <h3 class="text-xs font-semibold uppercase tracking-wider text-neutral-500">Other Projects</h3>
-                        <div class="bg-black border border-neutral-800 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-neutral-700 transition">
-                            <div class="flex items-center space-x-3">
-                                <div class="h-10 w-10 bg-neutral-900 border border-neutral-800 rounded-lg flex items-center justify-center font-mono text-sm font-bold text-neutral-400">AI</div>
-                                <div>
-                                    <h4 class="font-medium text-white hover:underline cursor-pointer">ai-chatbot-interface</h4>
-                                    <p class="text-xs text-neutral-400 font-mono mt-0.5">ai-chatbot-interface.vercel.app</p>
-                                </div>
-                            </div>
-                            <div class="flex items-center space-x-6 text-xs text-neutral-400 self-end sm:self-center">
-                                <span class="flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Active</span>
-                                <span>Updated 3d ago</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="space-y-6">
-                    <div class="bg-black border border-neutral-800 rounded-xl overflow-hidden">
-                        <div class="bg-neutral-950 p-3 border-b border-neutral-800 flex items-center justify-between">
-                            <span class="text-xs font-mono text-neutral-500">Deployment Preview</span>
-                            <span class="text-xs font-semibold text-emerald-400 bg-emerald-950/50 border border-emerald-900 px-2 py-0.5 rounded">99 / 100</span>
-                        </div>
-                        <div class="h-36 bg-neutral-900 flex items-center justify-center border-b border-neutral-800">
-                            <div class="text-center p-4 bg-black/40 border border-neutral-800 rounded-lg max-w-[80%]">
-                                <div class="h-3 w-16 bg-neutral-800 rounded mb-2 mx-auto"></div>
-                                <div class="h-2 w-24 bg-neutral-700 rounded mx-auto"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div id="projects-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
         </div>
 
-        <div id="view-integrations" class="view-content space-y-6">
+        <div id="view-script-builder" class="view-content space-y-6">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight">Integrations</h1>
-                <p class="text-neutral-400 text-sm mt-1">Connect your workspace with tools to automate development workflows.</p>
+                <h1 class="text-2xl font-bold tracking-tight">Script Integration Code</h1>
+                <p class="text-neutral-400 text-sm mt-1">Copy this tag into the <code>&lt;head&gt;</code> of your external GitHub repository pages.</p>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="bg-black border border-neutral-800 p-6 rounded-xl hover:border-neutral-700 transition space-y-4">
-                    <div class="h-12 w-12 bg-white text-black font-bold rounded-lg flex items-center justify-center text-xl">g</div>
-                    <div>
-                        <h3 class="font-semibold text-lg">GitHub Enterprise</h3>
-                        <p class="text-sm text-neutral-400 mt-1">Link internal source repositories seamlessly with production builds.</p>
+
+            <div class="bg-neutral-900 border border-neutral-800 rounded-xl p-6 space-y-4 max-w-3xl">
+                <label class="block text-sm font-medium text-neutral-300">Select Project Token Scope</label>
+                <select id="project-selector" onchange="updateSnippetPreview()" class="w-full max-w-md bg-black border border-neutral-800 rounded-md p-2 text-sm text-white focus:outline-none focus:border-neutral-700"></select>
+
+                <div class="space-y-2 mt-4">
+                    <span class="text-xs font-semibold text-neutral-500 uppercase tracking-wider">HTML Deployment Code</span>
+                    <div class="bg-black p-4 rounded-lg border border-neutral-800 font-mono text-sm text-emerald-400 overflow-x-auto">
+                        <code id="snippet-code-block"></code>
                     </div>
-                    <button class="w-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 py-2 rounded-md text-sm font-medium transition">Configure</button>
-                </div>
-                <div class="bg-black border border-neutral-800 p-6 rounded-xl hover:border-neutral-700 transition space-y-4">
-                    <div class="h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-xl">S</div>
-                    <div>
-                        <h3 class="font-semibold text-lg">Slack Notifications</h3>
-                        <p class="text-sm text-neutral-400 mt-1">Get real-time workspace build diagnostics and status pings instantly.</p>
-                    </div>
-                    <button class="w-full bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 py-2 rounded-md text-sm font-medium transition">Configure</button>
-                </div>
-                <div class="bg-black border border-neutral-800 p-6 rounded-xl hover:border-neutral-700 transition space-y-4">
-                    <div class="h-12 w-12 bg-neutral-900 border border-neutral-700 rounded-lg flex items-center justify-center font-bold text-xl">▲</div>
-                    <div>
-                        <h3 class="font-semibold text-lg">Logtail Engine</h3>
-                        <p class="text-sm text-neutral-400 mt-1">Pipe real-time serverless execution run logs directly into metrics dashboards.</p>
-                    </div>
-                    <button class="w-full bg-white text-black py-2 rounded-md text-sm font-medium transition">Connect</button>
                 </div>
             </div>
         </div>
 
         <div id="view-activity" class="view-content space-y-6">
             <div>
-                <h1 class="text-2xl font-bold tracking-tight">Activity Log</h1>
-                <p class="text-neutral-400 text-sm mt-1">A timeline auditing team event tracking logs inside your organization.</p>
+                <h1 class="text-2xl font-bold tracking-tight">Deployment Log</h1>
+                <p class="text-neutral-400 text-sm mt-1">Workspace action audits mapped locally.</p>
             </div>
-            <div class="border border-neutral-800 rounded-xl bg-black divide-y divide-neutral-800">
-                <div class="p-4 flex items-center justify-between text-sm">
-                    <div class="flex items-center space-x-3">
-                        <div class="h-8 w-8 rounded-full bg-purple-900 flex items-center justify-center font-bold text-xs text-purple-300">U</div>
-                        <p class="text-neutral-200"><strong class="text-white font-medium">user@domain.com</strong> forced production deployment on <span class="font-mono bg-neutral-900 px-1.5 py-0.5 rounded text-neutral-300 text-xs">nextjs-commerce</span></p>
-                    </div>
-                    <span class="text-xs text-neutral-500">12 mins ago</span>
-                </div>
-                <div class="p-4 flex items-center justify-between text-sm">
-                    <div class="flex items-center space-x-3">
-                        <div class="h-8 w-8 rounded-full bg-neutral-800 flex items-center justify-center font-bold text-xs">G</div>
-                        <p class="text-neutral-200"><strong class="text-white font-medium">GitHub Hook</strong> triggered automatic staging build branch <span class="font-mono bg-neutral-900 px-1.5 py-0.5 rounded text-neutral-300 text-xs">patch-2</span></p>
-                    </div>
-                    <span class="text-xs text-neutral-500">2 hours ago</span>
-                </div>
-                <div class="p-4 flex items-center justify-between text-sm">
-                    <div class="flex items-center space-x-3">
-                        <div class="h-8 w-8 rounded-full bg-emerald-950 flex items-center justify-center font-bold text-xs text-emerald-400">DB</div>
-                        <p class="text-neutral-200"><strong class="text-white font-medium">TiDB Pool</strong> updated integration target tables schemas</p>
-                    </div>
-                    <span class="text-xs text-neutral-500">Yesterday</span>
-                </div>
-            </div>
+            <div id="activity-log-wrapper" class="border border-neutral-800 rounded-xl bg-black divide-y divide-neutral-800 text-sm text-neutral-400"></div>
         </div>
-
-        <div id="view-settings" class="view-content space-y-6">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight">Project Settings</h1>
-                <p class="text-neutral-400 text-sm mt-1">Configure global variables, build steps, and environment flags.</p>
-            </div>
-            <div class="bg-black border border-neutral-800 rounded-xl max-w-2xl overflow-hidden">
-                <div class="p-6 space-y-4">
-                    <h3 class="font-medium text-lg">Project Name</h3>
-                    <p class="text-neutral-400 text-sm">Renaming changes production domains automatically.</p>
-                    <input type="text" value="personal-projects" class="w-full max-w-md px-3 py-2 bg-neutral-900 border border-neutral-800 rounded-md text-sm focus:outline-none focus:border-neutral-700">
-                </div>
-                <div class="bg-neutral-950 px-6 py-3 border-t border-neutral-800 flex justify-end">
-                    <button class="bg-white text-black text-xs font-medium px-4 py-2 rounded-md hover:bg-neutral-200 transition">Save Changes</button>
-                </div>
-            </div>
-            <div class="bg-black border border-red-900/50 rounded-xl max-w-2xl overflow-hidden">
-                <div class="p-6 space-y-2">
-                    <h3 class="font-medium text-lg text-red-500">Danger Zone</h3>
-                    <p class="text-neutral-400 text-sm">Permanently wipe all cluster histories, routes, and deployments instantly.</p>
-                </div>
-                <div class="bg-red-950/20 px-6 py-4 border-t border-red-900/40 flex justify-end">
-                    <button class="bg-red-600 hover:bg-red-700 text-white text-xs font-medium px-4 py-2 rounded-md transition">Delete Project</button>
-                </div>
-            </div>
-        </div>
-
     </main>
 
+    <div id="project-modal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-neutral-900 border border-neutral-800 w-full max-w-md rounded-xl overflow-hidden shadow-2xl">
+            <div class="p-6 space-y-4">
+                <h3 class="text-lg font-bold">Deploy New App Track</h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <label class="block text-neutral-400 mb-1">Project Name</label>
+                        <input id="input-project-name" type="text" placeholder="e.g. ecommerce-store" class="w-full bg-black border border-neutral-800 rounded-md p-2 text-white focus:outline-none focus:border-neutral-700">
+                    </div>
+                    <div>
+                        <label class="block text-neutral-400 mb-1">Domain</label>
+                        <input id="input-project-domain" type="text" placeholder="e.g. mysite.com" class="w-full bg-black border border-neutral-800 rounded-md p-2 text-white focus:outline-none focus:border-neutral-700">
+                    </div>
+                </div>
+            </div>
+            <div class="bg-neutral-950 p-4 border-t border-neutral-800 flex justify-end space-x-3">
+                <button class="text-xs font-medium text-neutral-400 hover:text-white px-4 py-2" onclick="closeNewProjectModal()">Cancel</button>
+                <button class="bg-white text-black text-xs font-medium px-4 py-2 rounded-md hover:bg-neutral-200" onclick="saveNewProject()">Deploy App</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // SPA Client-Side Routing Maps
-        const views = {
-            '/': 'view-overview',
-            '/integrations': 'view-integrations',
-            '/activity': 'view-activity',
-            '/settings': 'view-settings'
-        };
+        const views = { '/': 'view-overview', '/script-builder': 'view-script-builder', '/activity': 'view-activity' };
+
+        if (!localStorage.getItem('vercel_projects')) {
+            localStorage.setItem('vercel_projects', JSON.stringify([
+                { id: "trck_83d2a9f1", name: "nextjs-commerce-template", domain: "nextjs-commerce-template.vercel.app", created: "2 hours ago" }
+            ]));
+        }
+        if (!localStorage.getItem('vercel_logs')) {
+            localStorage.setItem('vercel_logs', JSON.stringify(["Workspace instance baseline profile configured successfully."]));
+        }
 
         function navigateTo(path) {
-            // Update browser URL query path using standard state pushes
             window.history.pushState({}, "", path);
             renderRoute(path);
         }
 
         function renderRoute(path) {
-            // Fallback default path assignment logic
             const targetViewId = views[path] || 'view-overview';
-
-            // 1. Swap visibility classes across registered views
-            document.querySelectorAll('.view-content').forEach(view => {
-                view.classList.remove('active');
-            });
+            document.querySelectorAll('.view-content').forEach(view => view.classList.remove('active'));
+            
             const targetView = document.getElementById(targetViewId);
             if (targetView) targetView.classList.add('active');
 
-            // 2. Synchronize visual navigation menu bars underline focus highlights
             document.querySelectorAll('.nav-tab').forEach(tab => {
-                const tabPath = tab.getAttribute('data-path');
-                if (tabPath === path) {
+                if (tab.getAttribute('data-path') === path) {
                     tab.classList.remove('border-transparent', 'text-neutral-400');
                     tab.classList.add('border-white', 'text-white', 'font-medium');
                 } else {
@@ -267,17 +154,104 @@ app.get('*', (req, res) => {
                     tab.classList.add('border-transparent', 'text-neutral-400');
                 }
             });
+
+            if (targetViewId === 'view-overview') renderOverviewGrid();
+            if (targetViewId === 'view-script-builder') fillSnippetSelectors();
+            if (targetViewId === 'view-activity') renderActivityLogs();
         }
 
-        // Catch dynamic browser back/forward buttons clicks execution events
-        window.addEventListener('popstate', () => {
-            renderRoute(window.location.pathname);
-        });
+        function renderOverviewGrid() {
+            const projects = JSON.parse(localStorage.getItem('vercel_projects'));
+            const grid = document.getElementById('projects-grid');
+            grid.innerHTML = '';
+            if (projects.length === 0) {
+                grid.innerHTML = \`<div class="col-span-full border border-dashed border-neutral-800 p-8 text-center rounded-xl text-neutral-500 text-sm">No deployed projects found.</div>\`;
+                return;
+            }
+            projects.forEach(p => {
+                grid.innerHTML += \`
+                    <div class="bg-black border border-neutral-800 rounded-xl overflow-hidden hover:border-neutral-700 transition">
+                        <div class="p-6 space-y-4">
+                            <div class="flex items-start justify-between">
+                                <div>
+                                    <h2 class="text-lg font-semibold text-white">\${p.name}</h2>
+                                    <span class="text-xs text-neutral-400 font-mono block mt-1">\${p.domain}</span>
+                                </div>
+                                <button class="text-xs border border-red-900 bg-red-950/20 text-red-400 px-2 py-1 rounded hover:bg-red-600 hover:text-white transition" onclick="deleteProject('\${p.id}')">Delete</button>
+                            </div>
+                            <div class="text-xs text-neutral-500 flex justify-between items-center bg-neutral-950 p-2.5 rounded border border-neutral-900">
+                                <span>Token: <code class="font-mono text-neutral-300">\${p.id}</code></span>
+                                <span>\${p.created}</span>
+                            </div>
+                        </div>
+                    </div>
+                \`;
+            });
+        }
 
-        // Initialize view states routing instantly during initialization
-        document.addEventListener('DOMContentLoaded', () => {
-            renderRoute(window.location.pathname);
-        });
+        function fillSnippetSelectors() {
+            const projects = JSON.parse(localStorage.getItem('vercel_projects'));
+            const selector = document.getElementById('project-selector');
+            selector.innerHTML = '';
+            if (projects.length === 0) {
+                selector.innerHTML = '<option value="none">Create a project first</option>';
+                updateSnippetPreview();
+                return;
+            }
+            projects.forEach(p => { selector.innerHTML += \`<option value="\${p.id}">\${p.name}</option>\`; });
+            updateSnippetPreview();
+        }
+
+        function updateSnippetPreview() {
+            const trackingId = document.getElementById('project-selector').value || 'none';
+            document.getElementById('snippet-code-block').innerText = \`<script src="\${window.location.origin}/tracking.js?id=\${trackingId}" defer><\\/script>\`;
+        }
+
+        function renderActivityLogs() {
+            const logs = JSON.parse(localStorage.getItem('vercel_logs'));
+            const container = document.getElementById('activity-log-wrapper');
+            container.innerHTML = '';
+            [...logs].reverse().forEach(log => {
+                container.innerHTML += \`<div class="p-4 flex items-center justify-between"><div class="flex items-center space-x-3"><span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span><p class="text-neutral-300 font-mono text-xs">\${log}</p></div></div>\`;
+            });
+        }
+
+        function openNewProjectModal() { document.getElementById('project-modal').classList.remove('hidden'); }
+        function closeNewProjectModal() { document.getElementById('project-modal').classList.add('hidden'); }
+
+        function saveNewProject() {
+            const name = document.getElementById('input-project-name').value.trim();
+            const domain = document.getElementById('input-project-domain').value.trim();
+            if (!name || !domain) return alert("Fill out all fields.");
+
+            const projects = JSON.parse(localStorage.getItem('vercel_projects'));
+            const logs = JSON.parse(localStorage.getItem('vercel_logs'));
+            const newId = "trck_" + Math.random().toString(16).slice(2, 10);
+
+            projects.push({ id: newId, name, domain, created: "Just now" });
+            logs.push(\`Deployed track target [\${name}] successfully.\`);
+
+            localStorage.setItem('vercel_projects', JSON.stringify(projects));
+            localStorage.setItem('vercel_logs', JSON.stringify(logs));
+
+            document.getElementById('input-project-name').value = '';
+            document.getElementById('input-project-domain').value = '';
+            closeNewProjectModal();
+            renderOverviewGrid();
+        }
+
+        function deleteProject(id) {
+            let projects = JSON.parse(localStorage.getItem('vercel_projects'));
+            let logs = JSON.parse(localStorage.getItem('vercel_logs'));
+            projects = projects.filter(p => p.id !== id);
+            logs.push(\`Deleted token cluster target [\${id}].\`);
+            localStorage.setItem('vercel_projects', JSON.stringify(projects));
+            localStorage.setItem('vercel_logs', JSON.stringify(logs));
+            renderOverviewGrid();
+        }
+
+        window.addEventListener('popstate', () => renderRoute(window.location.pathname));
+        document.addEventListener('DOMContentLoaded', () => renderRoute(window.location.pathname));
     </script>
 </body>
 </html>
