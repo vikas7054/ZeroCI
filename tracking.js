@@ -1,28 +1,49 @@
-// Web Analytics Tracking Script
-// Usage: Initialize with window.AnalyticsTracker.init(projectId) or set window.ANALYTICS_PROJECT_ID before loading
+<!-- Optimized Analytics Tracking Script (Option 3) -->
+<!-- High-Efficiency Recording with Visibility, Idle, and Memory Management -->
+<script src="https://unpkg.com/rrweb@2.0.0-alpha.4/dist/rrweb.min.js"></script>
+<script>
 (function() {
-  const API_URL = 'https://api1-orpin.vercel.app/api';
-  let events = [];
-  let recording = false;
-  let stopFn = null;
-  let sendInterval = null;
-  let projectId = null;
-  let mousePositions = [];
+  const API_URL = 'https://api1-orpin.vercel.app/api/custom';
+  const PROJECT_ID = '5d6a6287-8517-4838-bd68-67f5c8cab180';
 
+  // ==========================================
+  // CONFIGURATION
+  // ==========================================
+  const CONFIG = {
+    // Idle timeout: 5 minutes of no activity stops recording
+    IDLE_TIMEOUT_MS: 300000,
+    // Network flush interval: send data every 25 seconds
+    FLUSH_INTERVAL_MS: 25000,
+    // Checkout every 5 minutes for fresh baseline
+    CHECKOUT_INTERVAL_MS: 300000,
+    // Max events before forced flush
+    MAX_EVENTS_BEFORE_FLUSH: 50,
+    // Activity events to monitor for idle detection
+    ACTIVITY_EVENTS: ['mousemove', 'click', 'scroll', 'keydown'],
+    // Block class for elements to ignore
+    BLOCK_CLASS: 'rr-block'
+  };
+
+  // ==========================================
+  // STATE MANAGEMENT
+  // ==========================================
+  let eventBuffer = [];
+  let stopFn = null;
+  let isRecording = false;
+  let isTabVisible = true;
+  let idleTimer = null;
+  let flushInterval = null;
+  let lastActivityTime = Date.now();
+
+  // ==========================================
+  // UTILITY FUNCTIONS
+  // ==========================================
   function generateId() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
       const r = Math.random() * 16 | 0;
       const v = c === 'x' ? r : (r & 0x3 | 0x8);
       return v.toString(16);
     });
-  }
-
-  function getProjectId() {
-    if (projectId) return projectId;
-    if (window.ANALYTICS_PROJECT_ID) {
-      projectId = window.ANALYTICS_PROJECT_ID;
-    }
-    return projectId;
   }
 
   function getVisitorId() {
@@ -43,157 +64,282 @@
     return sessionId;
   }
 
-  function startRecording() {
-    if (recording || typeof rrweb === 'undefined' || !getProjectId()) return;
+  // ==========================================
+  // NETWORK FUNCTIONS
+  // ==========================================
+  async function flushEvents() {
+    if (eventBuffer.length === 0) return;
 
-    stopFn = rrweb.record({
-      emit(event) {
-        events.push(event);
-        if (events.length >= 10) {
-          sendEvents();
-        }
-      },
-      recordCanvas: true,
-      recordAfter: 'DOMContentLoaded',
-      maskAllInputs: false,
-      maskTextSelector: '[data-mask]',
-      slimDOMOptions: {
-        script: true,
-        comment: true,
-        headFavicon: true,
-        headWhitespace: true,
-      },
-      sampling: {
-        canvas: 10,
-        input: 'last',
-        scroll: 150,
-        media: 500
-      },
-      dataURLOptions: {
-        type: 'image/webp',
-        quality: 0.8
-      },
-      // Capture the viewport dimensions at the start
-      inlineStylesheet: true
-    });
-
-    recording = true;
-
-    if (sendInterval) clearInterval(sendInterval);
-    sendInterval = setInterval(sendEvents, 5000);
-
-    window.addEventListener('beforeunload', () => {
-      if (sendInterval) clearInterval(sendInterval);
-      sendEvents();
-    });
-  }
-
-  async function sendEvents() {
-    if (events.length === 0 || !getProjectId()) return;
-
-    const eventsToSend = events.splice(0, events.length);
-    const sessionData = {
-      sessionId: getSessionId(),
-      visitorId: getVisitorId(),
-      timestamp: new Date().toISOString(),
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      screenResolution: `${window.screen.width}x${window.screen.height}`,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-      devicePixelRatio: window.devicePixelRatio || 1,
-      events: eventsToSend
-    };
+    const eventsToSend = eventBuffer.splice(0, eventBuffer.length);
 
     try {
-      await fetch(`${API_URL}/${getProjectId()}/session`, {
+      await fetch(API_URL + '/' + PROJECT_ID + '/session', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(sessionData),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: getSessionId(),
+          visitorId: getVisitorId(),
+          timestamp: new Date().toISOString(),
+          url: window.location.href,
+          userAgent: navigator.userAgent,
+          screenResolution: window.screen.width + 'x' + window.screen.height,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+          events: eventsToSend,
+          // Metadata for debugging
+          meta: {
+            flushedAt: new Date().toISOString(),
+            eventCount: eventsToSend.length
+          }
+        })
       });
     } catch (error) {
-      console.error('Failed to send session data:', error);
-      events.unshift(...eventsToSend);
+      // Re-queue events on failure (with limit to prevent memory issues)
+      if (eventBuffer.length < 500) {
+        eventBuffer.unshift(...eventsToSend);
+      }
+      console.warn('Analytics flush failed, events will retry:', error);
     }
   }
 
-  function trackEvent(eventName, eventData = {}) {
-    if (!getProjectId()) {
-      console.warn('Analytics: No project ID configured. Set window.ANALYTICS_PROJECT_ID before loading script.');
-      return;
+  async function trackEvent(eventName, data) {
+    try {
+      await fetch(API_URL + '/' + PROJECT_ID + '/events/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          timestamp: new Date().toISOString(),
+          visitorId: getVisitorId(),
+          sessionId: getSessionId(),
+          eventName,
+          url: window.location.href,
+          referrer: document.referrer,
+          userAgent: navigator.userAgent,
+          screenResolution: window.screen.width + 'x' + window.screen.height,
+          ...data
+        })
+      });
+    } catch (error) {
+      console.warn('Event tracking failed:', error);
     }
-
-    const event = {
-      timestamp: new Date().toISOString(),
-      visitorId: getVisitorId(),
-      sessionId: getSessionId(),
-      eventName,
-      url: window.location.href,
-      referrer: document.referrer,
-      userAgent: navigator.userAgent,
-      screenResolution: `${window.screen.width}x${window.screen.height}`,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-      language: navigator.language,
-      ...eventData
-    };
-
-    fetch(`${API_URL}/${getProjectId()}/events/track`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(event),
-    }).catch(console.error);
   }
 
-  function init(pId) {
-    projectId = pId;
+  // ==========================================
+  // RECORDING CONTROL
+  // ==========================================
+  function startRecording() {
+    if (isRecording || typeof rrweb === 'undefined') return;
 
-    // Wait for rrweb to load before starting recording
+    try {
+      stopFn = rrweb.record({
+        emit(event) {
+          // Only record if tab is visible
+          if (!isTabVisible) return;
+
+          eventBuffer.push(event);
+
+          // Force flush if buffer gets too large
+          if (eventBuffer.length >= CONFIG.MAX_EVENTS_BEFORE_FLUSH) {
+            flushEvents();
+          }
+        },
+
+        // ==========================================
+        // AGGRESSIVE SAMPLING CONFIGURATION
+        // ==========================================
+        sampling: {
+          // Disable high-frequency mouse path tracking (reduces data by ~90%)
+          mouse: false,
+          // Throttle mouse movement to 500ms intervals
+          mousemove: 500,
+          // Scroll tracking at 200ms intervals
+          scroll: 200,
+          // Only capture final input state, not every keystroke
+          input: 'last',
+          // Limit canvas sampling
+          canvas: 0,
+          // Media element sampling
+          media: 800
+        },
+
+        // ==========================================
+        // STATIC PERIODIC CHECKOUTS
+        // ==========================================
+        // Take fresh baseline snapshot every 5 minutes
+        checkoutEveryNms: CONFIG.CHECKOUT_INTERVAL_MS,
+
+        // ==========================================
+        // ELEMENT BLOCKING
+        // ==========================================
+        // Elements with this class will be ignored
+        blockClass: CONFIG.BLOCK_CLASS,
+        // Also block elements with specific attributes
+        blockSelector: '[data-rr-block], .rr-block, canvas, video, iframe',
+
+        // ==========================================
+        // ADDITIONAL OPTIMIZATIONS
+        // ==========================================
+        // Don't record stylesheets (reduces payload)
+        inlineStylesheet: false,
+        // Mask all inputs for privacy
+        maskAllInputs: true,
+        // Slim DOM - remove script comments, etc.
+        slimDOMOptions: {
+          script: true,
+          comment: true,
+          headFavicon: true,
+          headWhitespace: true,
+          headMetaSocial: true,
+          headMetaRobots: true,
+          headMetaHttpEquiv: true,
+          headMetaAuthorship: true,
+          headMetaVerification: true
+        },
+
+        // Don't record canvas (huge data savings)
+        recordCanvas: false,
+
+        // Log level
+        log: false
+      });
+
+      isRecording = true;
+      console.log('Analytics: Recording started');
+    } catch (error) {
+      console.error('Analytics: Failed to start recording:', error);
+    }
+  }
+
+  function stopRecording(reason) {
+    if (!isRecording) return;
+
+    try {
+      if (stopFn) {
+        stopFn();
+        stopFn = null;
+      }
+      isRecording = false;
+
+      // Flush any remaining events
+      flushEvents();
+
+      console.log('Analytics: Recording stopped -', reason);
+    } catch (error) {
+      console.warn('Analytics: Error stopping recording:', error);
+    }
+  }
+
+  // ==========================================
+  // VISIBILITY CHANGE HANDLER
+  // ==========================================
+  function handleVisibilityChange() {
+    if (document.hidden) {
+      isTabVisible = false;
+      stopRecording('tab hidden');
+    } else {
+      isTabVisible = true;
+      lastActivityTime = Date.now();
+      startRecording();
+      resetIdleTimer();
+    }
+  }
+
+  // ==========================================
+  // IDLE INACTIVITY HANDLER
+  // ==========================================
+  function resetIdleTimer() {
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+    }
+
+    lastActivityTime = Date.now();
+
+    idleTimer = setTimeout(() => {
+      const timeSinceActivity = Date.now() - lastActivityTime;
+      if (timeSinceActivity >= CONFIG.IDLE_TIMEOUT_MS) {
+        stopRecording('idle timeout (5 min inactivity)');
+      }
+    }, CONFIG.IDLE_TIMEOUT_MS);
+  }
+
+  function handleActivity() {
+    lastActivityTime = Date.now();
+
+    // If recording was stopped due to idle, restart it
+    if (!isRecording && isTabVisible) {
+      startRecording();
+    }
+
+    resetIdleTimer();
+  }
+
+  // ==========================================
+  // INITIALIZATION
+  // ==========================================
+  function initialize() {
+    // Start recording when page loads
     if (document.readyState === 'complete') {
       startRecording();
     } else {
       window.addEventListener('load', startRecording);
     }
 
-    // Track pageview on init
-    trackEvent('pageview');
+    // ==========================================
+    // VISIBILITY CHANGE LISTENER
+    // ==========================================
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    // Track clicks
+    // ==========================================
+    // ACTIVITY LISTENERS (for idle detection)
+    // ==========================================
+    CONFIG.ACTIVITY_EVENTS.forEach(eventName => {
+      document.addEventListener(eventName, handleActivity, { passive: true });
+    });
+
+    // ==========================================
+    // PERIODIC FLUSH (25 seconds)
+    // ==========================================
+    flushInterval = setInterval(flushEvents, CONFIG.FLUSH_INTERVAL_MS);
+
+    // Initial activity timer
+    resetIdleTimer();
+
+    // ==========================================
+    // CLEANUP ON PAGE UNLOAD
+    // ==========================================
+    window.addEventListener('beforeunload', () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      if (flushInterval) clearInterval(flushInterval);
+      flushEvents();
+    });
+
+    // ==========================================
+    // TRACK INITIAL PAGEVIEW
+    // ==========================================
+    trackEvent('pageview', {
+      loadTime: performance.now ? performance.now() : 0
+    });
+
+    // ==========================================
+    // CLICK TRACKING
+    // ==========================================
     document.addEventListener('click', function(e) {
       const target = e.target.closest('a, button');
       if (target) {
         trackEvent('click', {
           elementType: target.tagName.toLowerCase(),
-          elementText: target.textContent?.trim(),
+          elementText: target.textContent?.trim().slice(0, 100),
           elementId: target.id,
-          elementClass: target.className,
-          clickX: e.clientX,
-          clickY: e.clientY
+          elementClass: target.className
         });
       }
     });
+
+    // Expose trackEvent globally
+    window.trackEvent = trackEvent;
   }
 
-  // Auto-initialize if project ID is set
-  if (window.ANALYTICS_PROJECT_ID) {
-    if (document.readyState === 'complete') {
-      init(window.ANALYTICS_PROJECT_ID);
-    } else {
-      window.addEventListener('load', () => init(window.ANALYTICS_PROJECT_ID));
-    }
-  }
-
-  // Expose tracking function and init globally
-  window.trackEvent = trackEvent;
-  window.AnalyticsTracker = {
-    init,
-    trackEvent,
-    getProjectId,
-    getVisitorId,
-    getSessionId
-  };
+  // Start the tracker
+  initialize();
 })();
+</script>
