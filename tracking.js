@@ -1,5 +1,4 @@
-<!-- Optimized Analytics Tracking Script (Option 3) -->
-<!-- High-Efficiency Recording with Visibility, Idle, and Memory Management -->
+
 <script src="https://unpkg.com/rrweb@2.0.0-alpha.4/dist/rrweb.min.js"></script>
 <script>
 (function() {
