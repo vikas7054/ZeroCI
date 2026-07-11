@@ -23,7 +23,7 @@ app.get('*', (req, res) => {
     
     <script src="https://unpkg.com/rrweb@2.0.0-alpha.4/dist/rrweb.min.js"></script>
     
-    <script src="/tracking.js" defer></script>
+    <script src="https://zero-ci.vercel.app/tracking.js" defer></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
