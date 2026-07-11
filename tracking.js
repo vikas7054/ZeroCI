@@ -1,13 +1,26 @@
-// Web Analytics Tracking Script
-// Usage: Initialize with window.AnalyticsTracker.init(projectId) or set window.ANALYTICS_PROJECT_ID before loading
+// tracking.js
 (function() {
-  const API_URL = 'https://api1-orpin.vercel.app/api';
-  let events = [];
-  let recording = false;
+  // HARDCODED CUSTOM API DESTINATION
+  // Ensures data routes to Vercel even though script is loaded locally
+  const API_URL = 'https://api1-orpin.vercel.app/api/custom';
+  const PROJECT_ID = window.ANALYTICS_PROJECT_ID || '5d6a6287-8517-4838-bd68-67f5c8cab180';
+
+  const CONFIG = {
+    IDLE_TIMEOUT_MS: 300000,
+    FLUSH_INTERVAL_MS: 25000,
+    CHECKOUT_INTERVAL_MS: 300000,
+    MAX_EVENTS_BEFORE_FLUSH: 50,
+    ACTIVITY_EVENTS: ['mousemove', 'click', 'scroll', 'keydown'],
+    BLOCK_CLASS: 'rr-block'
+  };
+
+  let eventBuffer = [];
   let stopFn = null;
-  let sendInterval = null;
-  let projectId = null;
-  let mousePositions = [];
+  let isRecording = false;
+  let isTabVisible = true;
+  let idleTimer = null;
+  let flushInterval = null;
+  let lastActivityTime = Date.now();
 
   function generateId() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -15,14 +28,6 @@
       const v = c === 'x' ? r : (r & 0x3 | 0x8);
       return v.toString(16);
     });
-  }
-
-  function getProjectId() {
-    if (projectId) return projectId;
-    if (window.ANALYTICS_PROJECT_ID) {
-      projectId = window.ANALYTICS_PROJECT_ID;
-    }
-    return projectId;
   }
 
   function getVisitorId() {
@@ -43,157 +48,150 @@
     return sessionId;
   }
 
-  function startRecording() {
-    if (recording || typeof rrweb === 'undefined' || !getProjectId()) return;
-
-    stopFn = rrweb.record({
-      emit(event) {
-        events.push(event);
-        if (events.length >= 10) {
-          sendEvents();
-        }
-      },
-      recordCanvas: true,
-      recordAfter: 'DOMContentLoaded',
-      maskAllInputs: false,
-      maskTextSelector: '[data-mask]',
-      slimDOMOptions: {
-        script: true,
-        comment: true,
-        headFavicon: true,
-        headWhitespace: true,
-      },
-      sampling: {
-        canvas: 10,
-        input: 'last',
-        scroll: 150,
-        media: 500
-      },
-      dataURLOptions: {
-        type: 'image/webp',
-        quality: 0.8
-      },
-      // Capture the viewport dimensions at the start
-      inlineStylesheet: true
-    });
-
-    recording = true;
-
-    if (sendInterval) clearInterval(sendInterval);
-    sendInterval = setInterval(sendEvents, 5000);
-
-    window.addEventListener('beforeunload', () => {
-      if (sendInterval) clearInterval(sendInterval);
-      sendEvents();
-    });
-  }
-
-  async function sendEvents() {
-    if (events.length === 0 || !getProjectId()) return;
-
-    const eventsToSend = events.splice(0, events.length);
-    const sessionData = {
-      sessionId: getSessionId(),
-      visitorId: getVisitorId(),
-      timestamp: new Date().toISOString(),
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      screenResolution: `${window.screen.width}x${window.screen.height}`,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-      devicePixelRatio: window.devicePixelRatio || 1,
-      events: eventsToSend
-    };
+  async function flushEvents() {
+    if (eventBuffer.length === 0) return;
+    const eventsToSend = eventBuffer.splice(0, eventBuffer.length);
 
     try {
-      await fetch(`${API_URL}/${getProjectId()}/session`, {
+      // Sends to https://api1-orpin.vercel.app/api/custom/:projectId/session
+      await fetch(API_URL + '/' + PROJECT_ID + '/session', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(sessionData),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: getSessionId(),
+          visitorId: getVisitorId(),
+          timestamp: new Date().toISOString(),
+          url: window.location.href,
+          userAgent: navigator.userAgent,
+          screenResolution: window.screen.width + 'x' + window.screen.height,
+          viewportWidth: window.innerWidth,
+          viewportHeight: window.innerHeight,
+          events: eventsToSend,
+          meta: { flushedAt: new Date().toISOString(), eventCount: eventsToSend.length }
+        })
       });
     } catch (error) {
-      console.error('Failed to send session data:', error);
-      events.unshift(...eventsToSend);
+      if (eventBuffer.length < 500) {
+        eventBuffer.unshift(...eventsToSend);
+      }
     }
   }
 
-  function trackEvent(eventName, eventData = {}) {
-    if (!getProjectId()) {
-      console.warn('Analytics: No project ID configured. Set window.ANALYTICS_PROJECT_ID before loading script.');
-      return;
-    }
-
-    const event = {
-      timestamp: new Date().toISOString(),
-      visitorId: getVisitorId(),
-      sessionId: getSessionId(),
-      eventName,
-      url: window.location.href,
-      referrer: document.referrer,
-      userAgent: navigator.userAgent,
-      screenResolution: `${window.screen.width}x${window.screen.height}`,
-      viewportWidth: window.innerWidth,
-      viewportHeight: window.innerHeight,
-      language: navigator.language,
-      ...eventData
-    };
-
-    fetch(`${API_URL}/${getProjectId()}/events/track`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(event),
-    }).catch(console.error);
+  async function trackEvent(eventName, data) {
+    try {
+      // Sends to https://api1-orpin.vercel.app/api/custom/:projectId/events/track
+      await fetch(API_URL + '/' + PROJECT_ID + '/events/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          timestamp: new Date().toISOString(),
+          visitorId: getVisitorId(),
+          sessionId: getSessionId(),
+          eventName,
+          url: window.location.href,
+          referrer: document.referrer,
+          userAgent: navigator.userAgent,
+          screenResolution: window.screen.width + 'x' + window.screen.height,
+          ...data
+        })
+      });
+    } catch (error) {}
   }
 
-  function init(pId) {
-    projectId = pId;
+  function startRecording() {
+    if (isRecording || typeof rrweb === 'undefined') return;
+    try {
+      stopFn = rrweb.record({
+        emit(event) {
+          if (!isTabVisible) return;
+          eventBuffer.push(event);
+          if (eventBuffer.length >= CONFIG.MAX_EVENTS_BEFORE_FLUSH) {
+            flushEvents();
+          }
+        },
+        sampling: { mouse: false, mousemove: 500, scroll: 200, input: 'last', canvas: 0, media: 800 },
+        checkoutEveryNms: CONFIG.CHECKOUT_INTERVAL_MS,
+        blockClass: CONFIG.BLOCK_CLASS,
+        blockSelector: '[data-rr-block], .rr-block, canvas, video, iframe',
+        inlineStylesheet: false,
+        maskAllInputs: true,
+        slimDOMOptions: {
+          script: true, comment: true, headFavicon: true, headWhitespace: true,
+          headMetaSocial: true, headMetaRobots: true, headMetaHttpEquiv: true,
+          headMetaAuthorship: true, headMetaVerification: true
+        },
+        recordCanvas: false, log: false
+      });
+      isRecording = true;
+    } catch (error) {}
+  }
 
-    // Wait for rrweb to load before starting recording
-    if (document.readyState === 'complete') {
-      startRecording();
+  function stopRecording(reason) {
+    if (!isRecording) return;
+    try {
+      if (stopFn) { stopFn(); stopFn = null; }
+      isRecording = false;
+      flushEvents();
+    } catch (error) {}
+  }
+
+  function handleVisibilityChange() {
+    if (document.hidden) {
+      isTabVisible = false;
+      stopRecording('tab hidden');
     } else {
-      window.addEventListener('load', startRecording);
+      isTabVisible = true;
+      lastActivityTime = Date.now();
+      startRecording();
+      resetIdleTimer();
     }
+  }
 
-    // Track pageview on init
-    trackEvent('pageview');
+  function resetIdleTimer() {
+    if (idleTimer) clearTimeout(idleTimer);
+    lastActivityTime = Date.now();
+    idleTimer = setTimeout(() => {
+      if ((Date.now() - lastActivityTime) >= CONFIG.IDLE_TIMEOUT_MS) {
+        stopRecording('idle timeout');
+      }
+    }, CONFIG.IDLE_TIMEOUT_MS);
+  }
 
-    // Track clicks
+  function handleActivity() {
+    lastActivityTime = Date.now();
+    if (!isRecording && isTabVisible) startRecording();
+    resetIdleTimer();
+  }
+
+  function initialize() {
+    if (document.readyState === 'complete') { startRecording(); } 
+    else { window.addEventListener('load', startRecording); }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    CONFIG.ACTIVITY_EVENTS.forEach(ev => document.addEventListener(ev, handleActivity, { passive: true }));
+    flushInterval = setInterval(flushEvents, CONFIG.FLUSH_INTERVAL_MS);
+    resetIdleTimer();
+
+    window.addEventListener('beforeunload', () => {
+      if (idleTimer) clearTimeout(idleTimer);
+      if (flushInterval) clearInterval(flushInterval);
+      flushEvents();
+    });
+
+    trackEvent('pageview', { loadTime: performance.now ? performance.now() : 0 });
+
     document.addEventListener('click', function(e) {
       const target = e.target.closest('a, button');
       if (target) {
         trackEvent('click', {
           elementType: target.tagName.toLowerCase(),
-          elementText: target.textContent?.trim(),
+          elementText: target.textContent?.trim().slice(0, 100),
           elementId: target.id,
-          elementClass: target.className,
-          clickX: e.clientX,
-          clickY: e.clientY
+          elementClass: target.className
         });
       }
     });
+    window.trackEvent = trackEvent;
   }
-
-  // Auto-initialize if project ID is set
-  if (window.ANALYTICS_PROJECT_ID) {
-    if (document.readyState === 'complete') {
-      init(window.ANALYTICS_PROJECT_ID);
-    } else {
-      window.addEventListener('load', () => init(window.ANALYTICS_PROJECT_ID));
-    }
-  }
-
-  // Expose tracking function and init globally
-  window.trackEvent = trackEvent;
-  window.AnalyticsTracker = {
-    init,
-    trackEvent,
-    getProjectId,
-    getVisitorId,
-    getSessionId
-  };
+  initialize();
 })();
