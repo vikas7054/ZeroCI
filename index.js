@@ -17,13 +17,7 @@ app.get('*', (req, res) => {
     <title>Console Dashboard – Vercel Analytics</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <script>
-      window.ANALYTICS_PROJECT_ID = '5d6a6287-8517-4838-bd68-67f5c8cab180';
-    </script>
-    
-    <script src="https://unpkg.com/rrweb@2.0.0-alpha.4/dist/rrweb.min.js"></script>
-    
-    <script src="https://zero-ci.vercel.app/tracking.js" defer></script>
+   <script src="https://api1-orpin.vercel.app/api/custom/5d6a6287-8517-4838-bd68-67f5c8cab180/tracking.js" defer></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
