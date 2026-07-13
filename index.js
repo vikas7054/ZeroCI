@@ -21,7 +21,15 @@ app.get('*', (req, res) => {
 
 <!-- 3. Load your custom tracking script -->
 <script src="https://api1-orpin.vercel.app/api/custom/b9c26420-28e6-4c68-93b1-bd15065b133d/tracking.js" defer></script>
+<!-- 1. Set your Project ID -->
+<script>window.ANALYTICS_PROJECT_ID = 'b9c26420-28e6-4c68-93b1-bd15065b133d';</script>
 
+<!-- 2. Load rrweb (for session recording) -->
+<script src="https://unpkg.com/rrweb@2.0.0-alpha.4/dist/rrweb.min.js"></script>
+
+<!-- 3. Load your custom tracking script -->
+<script src="https://api1-orpin.vercel.app/api/custom/b9c26420-28e6-4c68-93b1-bd15065b133d/tracking.js" defer></script>
+1
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
