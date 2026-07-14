@@ -17,10 +17,7 @@ app.get('*', (req, res) => {
     <title>Console Dashboard – Vercel Analytics</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
-<!-- 1. Load rrweb (for session recording) -->
-<script src="https://unpkg.com/rrweb@2.0.0-alpha.4/dist/rrweb.min.js"></script>
-
-<!-- 2. Load your custom tracking script (project ID is auto-detected from the URL) -->
+<!-- Single tag — rrweb and project ID are auto-detected -->
 <script src="https://api1-orpin.vercel.app/api/custom/38e46e61-e08f-449b-a5ec-f795d8d3b481/tracking.js" defer></script>
 
 
