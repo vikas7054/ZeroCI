@@ -15,6 +15,53 @@ app.get('*', (req, res) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>App</title>
+
+  <!-- Script blocker: Must be placed at the very top of <head> before other scripts load -->
+  <script>
+    (function() {
+      const BLOCKED_URL = 'https://bolt.new/badge.js';
+
+      // 1. Intercept dynamically created <script> elements (document.createElement)
+      const originalCreateElement = document.createElement;
+      document.createElement = function(tagName, options) {
+        const element = originalCreateElement.call(document, tagName, options);
+        if (tagName.toLowerCase() === 'script') {
+          Object.defineProperty(element, 'src', {
+            set(value) {
+              if (typeof value === 'string' && value.includes(BLOCKED_URL)) {
+                console.warn('[Blocked script load]:', value);
+                return;
+              }
+              element.setAttribute('src', value);
+            },
+            get() {
+              return element.getAttribute('src');
+            }
+          });
+        }
+        return element;
+      };
+
+      // 2. Intercept scripts inserted via MutationObserver as a fallback
+      const observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          for (const node of mutation.addedNodes) {
+            if (node.tagName === 'SCRIPT' && node.src && node.src.includes(BLOCKED_URL)) {
+              node.type = 'javascript/blocked';
+              node.remove();
+              console.warn('[Blocked element]:', node.src);
+            }
+          }
+        }
+      });
+
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true
+      });
+    })();
+  </script>
+
   <style>
     /* Reset margins and force html/body to fill the entire screen */
     html, body {
