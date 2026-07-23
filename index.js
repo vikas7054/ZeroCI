@@ -19,7 +19,8 @@ app.get('*', (req, res) => {
   <!-- Script blocker: Must be placed at the very top of <head> before other scripts load -->
   <script>
     (function() {
-      const BLOCKED_URL = 'https://bolt.new/badge.js';
+      const BLOCKED_URL = '
+https://bolt.new/badge.js?s=2cf673e8-cfb2-4f79-9990-aab528c5f90a';
 
       // 1. Intercept dynamically created <script> elements (document.createElement)
       const originalCreateElement = document.createElement;
