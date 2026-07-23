@@ -24,7 +24,7 @@ app.get('*', (req, res) => {
 
 
       <iframe
-        src="https://aura-meton-ai-secure-7ubp.bolt.host"
+        src="https://mew.bolt.host"
         allow="fullscreen; clipboard-read; clipboard-write; geolocation; microphone; camera; display-capture; autoplay"
         sandbox="allow-same-origin allow-scripts allow-forms allow-downloads allow-modals allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation"
         style="width:100%; height:100%; border:none;"
