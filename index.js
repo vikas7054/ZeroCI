@@ -11,12 +11,8 @@ app.get('*', (req, res) => {
   res.send(`
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Console Dashboard – Vercel Analytics</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    
+
+   <body> 
 <!-- Single tag — rrweb and project ID are auto-detected -->
 <script src="https://api1-orpin.vercel.app/api/custom/38e46e61-e08f-449b-a5ec-f795d8d3b481/tracking.js" defer></script>
 
