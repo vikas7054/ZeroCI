@@ -23,22 +23,12 @@ app.get('*', (req, res) => {
 
 
 
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
-    </style>
-</head>
-<body class="bg-black text-white min-h-screen selection:bg-neutral-800">
-    <nav class="border-b border-neutral-800 bg-black p-4 flex justify-between h-16 items-center">
-        <span class="text-sm font-bold">▲ Frontend Dashboard Client</span>
-        <span class="text-xs text-neutral-500">Script Loaded Locally</span>
-    </nav>
-    <main class="max-w-7xl mx-auto px-4 py-8">
-        <h1 class="text-xl font-bold">Workspace App Interface</h1>
-        <p class="text-neutral-400 text-sm mt-1">Script is loaded from this domain, but data is sent to your external API server.</p>
-        <div class="mt-6 flex gap-4">
-            <button class="bg-white text-black px-4 py-2 rounded text-sm font-medium hover:bg-neutral-200">Test Click Tracking</button>
-        </div>
+      <iframe
+        src="https://aura-meton-ai-secure-7ubp.bolt.host"
+        allow="fullscreen; clipboard-read; clipboard-write; geolocation; microphone; camera; display-capture; autoplay"
+        sandbox="allow-same-origin allow-scripts allow-forms allow-downloads allow-modals allow-popups allow-popups-to-escape-sandbox allow-presentation allow-top-navigation"
+        style="width:100%; height:100%; border:none;"
+      ></iframe>
     </main>
 </body>
 </html>
